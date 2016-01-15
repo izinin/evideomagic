@@ -2,7 +2,7 @@
 This is erlang API wrapper for video processing utility libav. 
 
 ## Dependencies
-    Open source audio and video processing tools: https://libav.org/ 
+    Open source audio and video processing tools: <https://libav.org/> 
     installation on ubuntu :
         apt-get install libav-tools
 
