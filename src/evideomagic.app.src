@@ -1,0 +1,13 @@
+{application, evideomagic,
+ [
+  {description, "libav-tools wrapper"},
+  {vsn, "1"},
+  {registered, []},
+  {modules, [evideomagic_app, evideomagic_sup, evideomagic]},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { evideomagic_app, []}},
+  {env, []}
+ ]}.
