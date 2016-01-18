@@ -16,9 +16,11 @@ forms queue in the server memory.
 evideomagic performs requests asynchronically. To receive result in calling client process 
 the API methods include parameter process id. Message sent to client process is a record,
 according to command :
+
+
     command               | API method    |  record definition
---------------------------|------------------------------------------------
-creating video thumbnail  | makeThumbnail | rd(make_thumbnail, {fnamein, fnameout, pid}).
+:--------------------------|:-------------:|:---------------------------------
+creating video thumbnail  | makeThumbnail | `rd(make_thumbnail, {fnamein, fnameout, pid}).`
 
 ## Manual run. 
     make run
