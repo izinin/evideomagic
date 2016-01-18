@@ -4,10 +4,11 @@
 
 -module(evideomagic).
 -behaviour(gen_server).
+
+-include("evideomagic.hrl").
+
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
-%% used to unsure concurrent requests will never clash
--record(make_thumbnail, {fnamein, fnameout}).
 %% ====================================================================
 %% API functions
 %% ====================================================================
@@ -22,31 +23,21 @@ stop() ->
     gen_server:call(?MODULE, stop).
 
 %% makeThumbnail/2
--spec makeThumbnail(VideoFname, OutFname) -> Result when
-	   Result :: ok
-			| {aborted, Message}
-			| {error, Message},
-    Message::string(),
+-spec makeThumbnail(VideoFname, Pid) -> ok when
     VideoFname::string(),
-    OutFname::string().
+    Pid::pid().
 %% ====================================================================
 %% @doc creates video thumbnail with the following parameters:
 %%      VideoFname - input video file
-%%      OutFname - output thumbnail file in png format
+%%      Pid        - calback process will receive base64 encoded thumbnail
 %% @end
-makeThumbnail(VideoFname, OutFname) ->
-    case mnesia:transaction(
-      fun()-> mnesia:select(make_thumbnail, 
-                            [{#make_thumbnail{fnamein='$1', 
-                                              fnameout=OutFname}, 
-                              [], ['$1']}]) end) of
-        {atomic,[]} -> 
-            Request = #make_thumbnail{fnamein=VideoFname, fnameout=OutFname},
-            gen_server:cast(?MODULE, Request);
-        {atomic, L} when length(L) > 0 -> 
-            {aborted, lists:flatten(io_lib:format("~p output name laready requested", [OutFname]))};
-        {aborted, Err} -> {error, lists:flatten(io_lib:format("~p", [Err]))}
-    end.
+makeThumbnail(VideoFname, Pid) ->
+    WorkDir = application:get_env(?APPNAME, workdir, ?DEFAULT_WORKDIR),
+    ok = filelib:ensure_dir(WorkDir ++ "/"),
+    OutFname = WorkDir ++ "/" ++ uuid:to_string(uuid:uuid1())  ++ ".png",
+    Request = #make_thumbnail{fnamein=VideoFname, fnameout=OutFname, pid=Pid},
+    gen_server:cast(?MODULE, Request).
+
 
 %% ====================================================================
 %% Behavioural functions 
@@ -66,9 +57,6 @@ makeThumbnail(VideoFname, OutFname) ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
-    mnesia:start(),
-    mnesia:create_table(make_thumbnail,
-        [{attributes, record_info(fields, make_thumbnail)}, {type, bag}]),
     {ok, #state{}}.
 
 
@@ -105,14 +93,15 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast({make_thumbnail, VideoFname, OutFname}, State) ->
-    Cmd = "avconv -i "++ VideoFname ++ " -ss 00:00:00 -vsync 1 -qscale 1 -vframes 1 " ++ OutFname ++ ".png",
+handle_cast({make_thumbnail, VideoFname, OutFname, Pid}=Req, State) ->
+    Cmd = "avconv -i "++ VideoFname ++ " -ss 00:00:00 -vsync 1 -qscale 1 -vframes 1 " ++ OutFname,
     Port = erlang:open_port({spawn, Cmd}, [stream, use_stdio, exit_status, binary]),
     {ok, Data, 0} = wait(Port, []),
     case erlang:port_info(Port) of
         undefined -> ok;
         _ -> true = erlang:port_close(Port)
     end,
+    Pid ! Req,
     {noreply, State}.
 
 

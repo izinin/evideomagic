@@ -15,4 +15,4 @@ clean:
 	${REBAR} clean
 
 run: get-deps compile
-	erl -pa deps/*/ebin -pa ./ebin -mnesia dir '"test/Mnesia.test"'
+	erl -smp -pa deps/*/ebin -pa ./ebin
