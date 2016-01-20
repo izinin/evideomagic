@@ -31,4 +31,23 @@ creating video thumbnail  | makeThumbnail | `rd(make_thumbnail, {fnamein, fnameo
     4> evideomagic:makeThumbnail("test/SampleVideo_1080x720_1mb.mp4", Pid).
     
     
+## Using in code.
+```
+-include_lib("evideomagic/include/evideomagic.hrl").
+...
+
+upload_video(Object, Type, File) ->
+    ...
+    evideomagic:makeThumbnail(Object:data(), self()),
+    receive 
+        #make_thumbnail{fnameout=ThumbFname} -> {ok, ThumbBin} = file:read_file(ThumbFname), 
+                                            Thumb = base64:encode(ThumbBin)
+    end,
+    ...
+    
+```
+    
+
+
+    
     
